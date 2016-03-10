@@ -1,0 +1,46 @@
+---
+title: Analysis of U.S. National Oceanic and Atmospheric Administration's storm
+  data
+author: "Emmanuel ROCHE"
+date: "08/03/2016"
+output: html_document
+---
+
+# Synopsys
+
+# Data Processing
+
+The source dataset used in this analysis can be retrieved from , we keep the dataset in a compressed format since it can be read directly in R.
+
+```{r}
+if(!file.exists("StormData.csv.bz2"))
+{
+  download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", destfile = "StormData.csv.bz2")
+}
+
+
+data <- read.csv("StormData.csv.bz2")
+```
+
+We can first check the number of observations available and display a few of them:
+
+```{r}
+dim(data)
+```
+
+This dataset contains `r dim(data[2])` variables, but for this initial analysis, we are only interested in a few of those variables:
+
+  * **EVTTYPE** : indicates the type of the storm event that occured,
+  * **LENGTH** : indicates the duration of the storm event,
+  * **FATALITIES** : number of death due to the storm event,
+  * **INJURIES** : number of injuries due to the storm event.
+
+We isolate those variables in a new dataset, and we only consider the available complete cases.
+
+```{r}
+
+```
+
+# Results
+
+# Classification of the most 
