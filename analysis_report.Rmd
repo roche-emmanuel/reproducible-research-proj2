@@ -12,20 +12,20 @@ output: html_document
 
 The source dataset used in this analysis can be retrieved from , we keep the dataset in a compressed format since it can be read directly in R.
 
-```{r}
+```{r cache=TRUE}
 if(!file.exists("StormData.csv.bz2"))
 {
   download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2", destfile = "StormData.csv.bz2")
 }
 
-
 data <- read.csv("StormData.csv.bz2")
 ```
 
-We can first check the number of observations available and display a few of them:
+We can first check the number of observations available:
 
 ```{r}
 dim(data)
+
 ```
 
 This dataset contains `r dim(data[2])` variables, but for this initial analysis, we are only interested in a few of those variables:
@@ -35,12 +35,88 @@ This dataset contains `r dim(data[2])` variables, but for this initial analysis,
   * **FATALITIES** : number of death due to the storm event,
   * **INJURIES** : number of injuries due to the storm event.
 
-We isolate those variables in a new dataset, and we only consider the available complete cases.
+We isolate those variables in a new dataset, and we only consider the available complete cases. It is also worth noticing that some of event types are very similar, so we try to merge them as mush as possible by applying a few transformation rules in the following order:
 
-```{r}
+  1. We will remove all ".",
+  1. We will remove all ending "/" characters in the event type names,
+  1. We will replace "XXX/YYY" with "XXX AND YYY",
+  1. We will replace "XXX & YYY" with "XXX AND YYY",
+  1. We will turn all event type names to lower case.
+  
 
+```{r results='hide'}
+library(dplyr)
+subdat <- select(data,EVTYPE,FATALITIES,INJURIES)
+subdat <- subdat[complete.cases(subdat),]
+
+# Applying the transformations rules for the event types:
+subdat$EVTYPE <- gsub("\\.","",subdat$EVTYPE)
+subdat$EVTYPE <- gsub("/$","",subdat$EVTYPE)
+subdat$EVTYPE <- gsub("/"," AND ",subdat$EVTYPE)
+subdat$EVTYPE <- gsub(" & "," AND ",subdat$EVTYPE)
+subdat$EVTYPE <- tolower(subdat$EVTYPE)
 ```
 
 # Results
 
-# Classification of the most 
+## Storm event population health impact
+
+To clarify what is the population health impact of the storm events, we first summarize the fatalities and injuries per event type:
+
+```{r results='hide'}
+library(plyr)
+health_impact <- ddply(subdat, "EVTYPE", summarize, total_death=sum(FATALITIES), total_injuries=sum(INJURIES))
+```
+
+From this health_impact dataset, we can extract the event types producing the highest number of fatalities and injuries. But  first, to simplify the analysis, we can turn the total number of death and injuries into percentages:
+
+```{r}
+tot_death <- sum(health_impact$total_death)
+tot_inj <- sum(health_impact$total_injuries)
+
+health_impact <- mutate(health_impact, total_death = 100.0*total_death/tot_death, total_injuries = 100.0*total_injuries/tot_inj) 
+
+# select the highest fatalities values:
+highest_death <- health_impact[order(health_impact$total_death, decreasing=T),]
+highest_inj <- health_impact[order(health_impact$total_injuries, decreasing=T),]
+```
+
+Also note here that those storm event were responsible so far for at least `r format(tot_death,scientific=F)` deaths and `r format(tot_inj,scientific=F)` injuries according to this report.
+
+Now to get an idea on the most harmfull type of storm event we will mainly consider those responsible for 80% of the fatalities and injuries respectively:
+
+```{r}
+# Accumulate the percentage of death and injuries:
+highest_death <- mutate(highest_death,accum_death=cumsum(total_death))
+highest_inj <- mutate(highest_inj,accum_injuries=cumsum(total_injuries))
+
+focus_death <- highest_death[highest_death$accum_death<80.0,]
+focus_inj <- highest_inj[highest_inj$accum_injuries<80.0,]
+
+# For completeness we also need to add the other event types as "Others" in both focused datasets:
+nfdeath <- dim(focus_death)[1]
+nfinj <- dim(focus_inj)[1]
+
+#othdeath <- 100.0 - focus_death$accum_death[nfdeath]
+#othinj <- 100.0 - focus_inj$accum_injuries[nfinj]
+
+#focus_death <- rbind(focus_death, data.frame(EVTYPE = "others", total_death = othdeath, total_injuries = 0, accum_death = 100.0))
+#focus_inj <- rbind(focus_inj, data.frame(EVTYPE = "others", total_death = 0, total_injuries = othinj, accum_injuries = 100.0))
+```
+
+
+Finally we can plot here the distribution of the `r format(nfdeath)` most deadly storm event types and the `r format(nfinj)` types responsible for about 80% of the injuries:
+
+```{r}
+library(ggplot2)
+p<-ggplot(focus_death, aes(x=1:nfdeath, y=total_death, fill=EVTYPE)) + geom_bar(stat="identity")+theme_minimal()
+p<-p+labs(title="Most harmfull storm events - fatalities", x="Event type", y = "Percentage of death")
+p<-p+geom_text(aes(label=sprintf("%.2f%%",total_death)), vjust=-0.3, size=2.5)
+p
+#par(yaxt="n")
+#barplot(focus_death$total_death)
+#axis(1, at=seq(1, nfdeath, by=1), labels = FALSE)
+#text(x = seq(1, nfdeath, by=1), labels = focus_death$EVTYPE, srt = 90, pos = 1, xpd = TRUE)
+
+#barplot(focus_inj$total_injuries, names.arg=focus_inj$EVTYPE)
+```
