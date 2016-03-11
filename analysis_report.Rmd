@@ -165,5 +165,54 @@ eco_impact <- ddply(eco_dat, "EVTYPE", summarize, prop_damage=sum(PROPDMG), crop
 eco_nevents <- dim(eco_impact)[1]
 ```
 
-We now have to select the most harmfull event types amongt the `r sprintf("%d",eco_nevents)` unique event types found.
+We now have to select the most harmfull event types amongt the `r sprintf("%d",eco_nevents)` unique event types found. To acheive this we can proceed as with the population health analysis: we turn the numbers of interest into percentages, and we select the event types responsible for about 80% of the damage costs.
+
+But this time, we will summarise the input data one step further, and assume that property damages and crop damages have equivalent economic impact, so we can sum them together first.
+
+```{r}
+# compute the total damages:
+eco_impact$total_damage <- eco_impact$prop_damage + eco_impact$crop_damage
+
+# compute the overall total damage value:
+tot_dmgvalue <- sum(eco_impact$total_damage)
+
+# turn the total damage into percentages:
+eco_impact$total_damage <- 100.0*eco_impact$total_damage/tot_dmgvalue
+
+# order the entries by total damage percentage values, and only keep the EVTYPE 
+# and the total_damage columns in this process:
+eco_impact <- eco_impact[order(eco_impact$total_damage, decreasing = T),c("EVTYPE","total_damage")]
+
+# Now add the cumulative damage percentage column:
+eco_impact <- mutate(eco_impact, accum_damage = cumsum(total_damage))
+
+# Lets print the 20 first entries:
+head(eco_impact,10)
+```
+
+We can now produce a plot presenting the event types responsible for about 80% of the damage costs.
+
+```{r}
+# keep only the most damaging event types:
+eco_focus <- eco_impact[eco_impact$accum_damage<80.0,]
+
+# keep number of focused event types:
+eco_nevents <- dim(eco_focus)[1]
+
+# Generate the bar plot:
+library(ggplot2)
+
+p<-ggplot(eco_focus, aes(x=1:eco_nevents, y=total_damage, fill=EVTYPE)) + geom_bar(stat="identity")+theme_minimal()
+p<-p+labs(title="Most harmfull storm events\nDamage costs", x="Event type", y = "Percentage of all costs")
+p<-p+geom_text(aes(label=sprintf("%.2f%%",total_damage)), vjust=-0.3, size=2.5, angle=0, hjust=0.5)
+p<-p+theme(legend.justification=c(1,1), legend.position=c(1,1), axis.text.x=element_blank())
+p<-p+scale_y_continuous(limits = c(0.0,100.0))
+
+p
+```
+
+We observe from the previous graph that `r sprintf("%d", eco_nevents)`event types are responsible for about 80% of the damage costs. Among those listed storm events we can notice once more that the Tornados are the most harmfull event type, accounting on its own for about `r sprintf("%.0f%%",eco_focus$total_damage[1])` of the overall damage cost.
+
+
+
 
