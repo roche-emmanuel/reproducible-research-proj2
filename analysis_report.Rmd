@@ -91,18 +91,25 @@ eco_dat$EVTYPE <- gsub(" & "," AND ",eco_dat$EVTYPE)
 eco_dat$EVTYPE <- tolower(eco_dat$EVTYPE)
 ```
 
-The damage costs also come with a multiplier, so we should apply it right here to only use dollar costs afterwards. The multipliers can be: Hundred (H), Thousand (K), Million (M) and Billion (B).
+The damage costs also come with a multiplier, so we should apply it right here to only use dollar costs afterwards. The multipliers can be: Hundred (H), Thousand (K), Million (M) and Billion (B), but we have some incorrect values too such as: "0", "k", "m" or "?". We will replace all in correct values with 0 (effectively removing the corresponding damage cost in the end).
 
 ```{r}
 # helper method used to fix the multiplier values, 
 # replacing the characters 'H', 'K', 'M' and 'B'
 fixMultiplier <- function(mult)
 {
+  mult <- as.character(mult)
   mult[mult==""] <- 1
   mult[mult=="H"] <- 100
   mult[mult=="K"] <- 1000
+  mult[mult=="k"] <- 1000
   mult[mult=="M"] <- 1e6
+  mult[mult=="m"] <- 1e6
   mult[mult=="B"] <- 1e9
+  
+  # Replace the incorrect values:
+  mult[!(mult %in% c("1","100","1000","1e+06","1e+09"))] <- 0
+  
   as.numeric(mult)
 }
 

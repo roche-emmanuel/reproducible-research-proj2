@@ -190,40 +190,30 @@ eco_dat$EVTYPE &lt;- gsub(&quot;/$&quot;,&quot;&quot;,eco_dat$EVTYPE)
 eco_dat$EVTYPE &lt;- gsub(&quot;/&quot;,&quot; AND &quot;,eco_dat$EVTYPE)
 eco_dat$EVTYPE &lt;- gsub(&quot; &amp; &quot;,&quot; AND &quot;,eco_dat$EVTYPE)
 eco_dat$EVTYPE &lt;- tolower(eco_dat$EVTYPE)</code></pre>
-<p>The damage costs also come with a multiplier, so we should apply it right here to only use dollar costs afterwards. The multipliers can be: Hundred (H), Thousand (K), Million (M) and Billion (B).</p>
+<p>The damage costs also come with a multiplier, so we should apply it right here to only use dollar costs afterwards. The multipliers can be: Hundred (H), Thousand (K), Million (M) and Billion (B), but we have some incorrect values too such as: “0”, “k”, “m” or “?”. We will replace all in correct values with 0 (effectively removing the corresponding damage cost in the end).</p>
 <pre class="r"><code># helper method used to fix the multiplier values, 
 # replacing the characters 'H', 'K', 'M' and 'B'
 fixMultiplier &lt;- function(mult)
 {
+  mult &lt;- as.character(mult)
   mult[mult==&quot;&quot;] &lt;- 1
   mult[mult==&quot;H&quot;] &lt;- 100
   mult[mult==&quot;K&quot;] &lt;- 1000
+  mult[mult==&quot;k&quot;] &lt;- 1000
   mult[mult==&quot;M&quot;] &lt;- 1e6
+  mult[mult==&quot;m&quot;] &lt;- 1e6
   mult[mult==&quot;B&quot;] &lt;- 1e9
+  
+  # Replace the incorrect values:
+  mult[!(mult %in% c(&quot;1&quot;,&quot;100&quot;,&quot;1000&quot;,&quot;1e+06&quot;,&quot;1e+09&quot;))] &lt;- 0
+  
   as.numeric(mult)
 }
 
-eco_dat$PROPDMGEXP &lt;- fixMultiplier(eco_dat$PROPDMGEXP)</code></pre>
-<pre><code>## Warning in `[&lt;-.factor`(`*tmp*`, mult == &quot;H&quot;, value = 100): invalid factor
-## level, NA generated</code></pre>
-<pre><code>## Warning in `[&lt;-.factor`(`*tmp*`, mult == &quot;K&quot;, value = 1000): invalid factor
-## level, NA generated</code></pre>
-<pre><code>## Warning in `[&lt;-.factor`(`*tmp*`, mult == &quot;M&quot;, value = 1e+06): invalid
-## factor level, NA generated</code></pre>
-<pre><code>## Warning in `[&lt;-.factor`(`*tmp*`, mult == &quot;B&quot;, value = 1e+09): invalid
-## factor level, NA generated</code></pre>
-<pre class="r"><code>eco_dat$CROPDMGEXP &lt;- fixMultiplier(eco_dat$CROPDMGEXP)</code></pre>
-<pre><code>## Warning in `[&lt;-.factor`(`*tmp*`, mult == &quot;&quot;, value = 1): invalid factor
-## level, NA generated</code></pre>
-<pre><code>## Warning in `[&lt;-.factor`(`*tmp*`, mult == &quot;H&quot;, value = 100): invalid factor
-## level, NA generated</code></pre>
-<pre><code>## Warning in `[&lt;-.factor`(`*tmp*`, mult == &quot;K&quot;, value = 1000): invalid factor
-## level, NA generated</code></pre>
-<pre><code>## Warning in `[&lt;-.factor`(`*tmp*`, mult == &quot;M&quot;, value = 1e+06): invalid
-## factor level, NA generated</code></pre>
-<pre><code>## Warning in `[&lt;-.factor`(`*tmp*`, mult == &quot;B&quot;, value = 1e+09): invalid
-## factor level, NA generated</code></pre>
-<pre class="r"><code># Now perform the damage cost multiplications:
+eco_dat$PROPDMGEXP &lt;- fixMultiplier(eco_dat$PROPDMGEXP)
+eco_dat$CROPDMGEXP &lt;- fixMultiplier(eco_dat$CROPDMGEXP)
+
+# Now perform the damage cost multiplications:
 eco_data &lt;- mutate(eco_dat, PROPDMG=as.numeric(PROPDMG)*PROPDMGEXP,CROPDMG=as.numeric(CROPDMG)*CROPDMGEXP )
 
 # drop the EXP colnums:
