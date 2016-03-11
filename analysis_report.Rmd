@@ -28,10 +28,13 @@ dim(data)
 
 ```
 
-This dataset contains `r dim(data[2])` variables, but for this initial analysis, we are only interested in a few of those variables:
+This dataset contains `r dim(data[2])` variables, but for this initial analysis, we are only interested in a few of those variables, that will be selected below depending on the focus of the analysis (either population health impact or economic impact)
+
+## Population health impact processing
+
+For this part of the analysis, we will focus on the following variables:
 
   * **EVTTYPE** : indicates the type of the storm event that occured,
-  * **LENGTH** : indicates the duration of the storm event,
   * **FATALITIES** : number of death due to the storm event,
   * **INJURIES** : number of injuries due to the storm event.
 
@@ -46,16 +49,18 @@ We isolate those variables in a new dataset, and we only consider the available 
 
 ```{r results='hide'}
 library(dplyr)
-subdat <- select(data,EVTYPE,FATALITIES,INJURIES)
-subdat <- subdat[complete.cases(subdat),]
+health_dat <- select(data,EVTYPE,FATALITIES,INJURIES)
+health_dat <- health_dat[complete.cases(health_dat),]
 
 # Applying the transformations rules for the event types:
-subdat$EVTYPE <- gsub("\\.","",subdat$EVTYPE)
-subdat$EVTYPE <- gsub("/$","",subdat$EVTYPE)
-subdat$EVTYPE <- gsub("/"," AND ",subdat$EVTYPE)
-subdat$EVTYPE <- gsub(" & "," AND ",subdat$EVTYPE)
-subdat$EVTYPE <- tolower(subdat$EVTYPE)
+health_dat$EVTYPE <- gsub("\\.","",health_dat$EVTYPE)
+health_dat$EVTYPE <- gsub("/$","",health_dat$EVTYPE)
+health_dat$EVTYPE <- gsub("/"," AND ",health_dat$EVTYPE)
+health_dat$EVTYPE <- gsub(" & "," AND ",health_dat$EVTYPE)
+health_dat$EVTYPE <- tolower(health_dat$EVTYPE)
 ```
+
+
 
 # Results
 
@@ -65,7 +70,7 @@ To clarify what is the population health impact of the storm events, we first su
 
 ```{r results='hide'}
 library(plyr)
-health_impact <- ddply(subdat, "EVTYPE", summarize, total_death=sum(FATALITIES), total_injuries=sum(INJURIES))
+health_impact <- ddply(health_dat, "EVTYPE", summarize, total_death=sum(FATALITIES), total_injuries=sum(INJURIES))
 ```
 
 From this health_impact dataset, we can extract the event types producing the highest number of fatalities and injuries. But  first, to simplify the analysis, we can turn the total number of death and injuries into percentages:
@@ -93,15 +98,9 @@ highest_inj <- mutate(highest_inj,accum_injuries=cumsum(total_injuries))
 focus_death <- highest_death[highest_death$accum_death<80.0,]
 focus_inj <- highest_inj[highest_inj$accum_injuries<80.0,]
 
-# For completeness we also need to add the other event types as "Others" in both focused datasets:
+# Compute the number of event types of interest:
 nfdeath <- dim(focus_death)[1]
 nfinj <- dim(focus_inj)[1]
-
-#othdeath <- 100.0 - focus_death$accum_death[nfdeath]
-#othinj <- 100.0 - focus_inj$accum_injuries[nfinj]
-
-#focus_death <- rbind(focus_death, data.frame(EVTYPE = "others", total_death = othdeath, total_injuries = 0, accum_death = 100.0))
-#focus_inj <- rbind(focus_inj, data.frame(EVTYPE = "others", total_death = 0, total_injuries = othinj, accum_injuries = 100.0))
 ```
 
 
@@ -109,14 +108,23 @@ Finally we can plot here the distribution of the `r format(nfdeath)` most deadly
 
 ```{r}
 library(ggplot2)
-p<-ggplot(focus_death, aes(x=1:nfdeath, y=total_death, fill=EVTYPE)) + geom_bar(stat="identity")+theme_minimal()
-p<-p+labs(title="Most harmfull storm events - fatalities", x="Event type", y = "Percentage of death")
-p<-p+geom_text(aes(label=sprintf("%.2f%%",total_death)), vjust=-0.3, size=2.5)
-p
-#par(yaxt="n")
-#barplot(focus_death$total_death)
-#axis(1, at=seq(1, nfdeath, by=1), labels = FALSE)
-#text(x = seq(1, nfdeath, by=1), labels = focus_death$EVTYPE, srt = 90, pos = 1, xpd = TRUE)
+library(gridExtra)
 
-#barplot(focus_inj$total_injuries, names.arg=focus_inj$EVTYPE)
+p<-ggplot(focus_death, aes(x=1:nfdeath, y=total_death, fill=EVTYPE)) + geom_bar(stat="identity")+theme_minimal()
+p<-p+labs(title="Most harmfull storm events\nFatalities", x="Event type", y = "Percentage of death")
+p<-p+geom_text(aes(label=sprintf("%.2f%%",total_death)), vjust=0.0, size=2.5, angle=45, hjust=0.0)
+p<-p+theme(legend.justification=c(1,1), legend.position=c(1,1), axis.text.x=element_blank())
+p<-p+scale_y_continuous(limits = c(0.0,100.0))
+
+p2<-ggplot(focus_inj, aes(x=1:nfinj, y=total_injuries, fill=EVTYPE)) + geom_bar(stat="identity")+theme_minimal()
+p2<-p2+labs(title="Most harmfull storm events\nInjuries", x="Event type", y = "Percentage of injuries")
+p2<-p2+geom_text(aes(label=sprintf("%.2f%%",total_injuries)), vjust=-0.3, size=2.5)
+p2<-p2+theme(legend.justification=c(1,1), legend.position=c(1,1), axis.text.x=element_blank())
+p2<-p2+scale_y_continuous(limits = c(0.0,100.0))
+
+grid.arrange(p,p2,ncol=2)
+
 ```
+
+As represented on the graphics above it seems that tornados are the absolute most harmfull storm events during the period covered by the source dataset. The fatalities impact is then more distributed on about 10 event types, whereas, for the injuries, we can select only 4 event types responsible for most injury cases (80%).
+
