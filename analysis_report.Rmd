@@ -1,5 +1,5 @@
 ---
-title: Analysis of Storm events health and economic impacts
+title: Analysis of severe weather events health and economic impacts
 author: "Emmanuel ROCHE"
 date: "11/03/2016"
 output: html_document
@@ -7,12 +7,11 @@ output: html_document
 
 # Synopsys
 
-This analysis is based on the **U.S. National Oceanic and Atmospheric Administration's storm dataset** covering the period from 1950 to 2011. We first focus on the population health effect of those storm event, and highly the most harmful types of event during the overall period, we then perform the same analysis this time focusing on the economic effect of the storm events by selecting those responsible for most of the damage costs. This report will conclude that in both cases tornados are by far the most harmful type of events that occured in the United States during the covered period of time.
-We extend this report by analysis the evolution of the most significant event types impact other the time and thus conclude that the high impact of tornados is due to some extent to the poor recording quality of the source dataset in the early years.
+This analysis is based on the **U.S. National Oceanic and Atmospheric Administration's storm dataset** covering the period from 1950 to 2011. We first focus on the population health effect of those weather events, and highlight the most harmful types of event during the overall period, we then perform the same analysis this time focusing on the economic effect of the storm events by selecting those responsible for most of the damage costs. This report will conclude that in both cases tornados seem to be by far the most harmful type of events that occured in the United States during the covered period of time. Yet, we extend this report by analysing the evolution of the most significant event types impact other the time and thus conclude that the high impact of tornados is due to a large extent to the poor recording quality of the source dataset in the early years.
 
 # Data Processing
 
-The source dataset used in this analysis can be retrieved from , we keep the dataset in a compressed format since it can be read directly in R.
+The source dataset used in this analysis can be retrieved from [this link](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2), we keep the dataset in a compressed format since it can be read directly in R.
 
 ```{r cache=TRUE}
 if(!file.exists("StormData.csv.bz2"))
@@ -69,11 +68,13 @@ For the economic perspective, we will focus on the following variables:
 
   * **EVTTYPE** : indicates the type of the storm event that occured,
   * **PROPDMG**: property damage due to the storm event,
-  * **CROPDMG**: crop damage due to the storm event.
+  * **PROPDMGEXP**: multiplier to apply on the property damage value,
+  * **CROPDMG**: crop damage due to the storm event,
+  * **CROPDMGEXP**: multiplier to apply on the crop damage value.
   
 ```{r}
 library(dplyr)
-eco_dat <- select(data,EVTYPE,PROPDMG,CROPDMG)
+eco_dat <- select(data,EVTYPE,PROPDMG,CROPDMG, PROPDMGEXP, CROPDMGEXP)
 
 # Again we only keep the complete cases:
 eco_dat <- eco_dat[complete.cases(eco_dat),]
@@ -88,6 +89,31 @@ eco_dat$EVTYPE <- gsub("/$","",eco_dat$EVTYPE)
 eco_dat$EVTYPE <- gsub("/"," AND ",eco_dat$EVTYPE)
 eco_dat$EVTYPE <- gsub(" & "," AND ",eco_dat$EVTYPE)
 eco_dat$EVTYPE <- tolower(eco_dat$EVTYPE)
+```
+
+The damage costs also come with a multiplier, so we should apply it right here to only use dollar costs afterwards. The multipliers can be: Hundred (H), Thousand (K), Million (M) and Billion (B).
+
+```{r}
+# helper method used to fix the multiplier values, 
+# replacing the characters 'H', 'K', 'M' and 'B'
+fixMultiplier <- function(mult)
+{
+  mult[mult==""] <- 1
+  mult[mult=="H"] <- 100
+  mult[mult=="K"] <- 1000
+  mult[mult=="M"] <- 1e6
+  mult[mult=="B"] <- 1e9
+  as.numeric(mult)
+}
+
+eco_dat$PROPDMGEXP <- fixMultiplier(eco_dat$PROPDMGEXP)
+eco_dat$CROPDMGEXP <- fixMultiplier(eco_dat$CROPDMGEXP)
+
+# Now perform the damage cost multiplications:
+eco_data <- mutate(eco_dat, PROPDMG=as.numeric(PROPDMG)*PROPDMGEXP,CROPDMG=as.numeric(CROPDMG)*CROPDMGEXP )
+
+# drop the EXP colnums:
+eco_dat <- select(eco_dat,EVTYPE,PROPDMG,CROPDMG)
 ```
 
 # Results
