@@ -71,7 +71,7 @@ For the economic perspective, we will focus on the following variables:
   
 ```{r}
 library(dplyr)
-eco_dat <- select(data,EVTYPE,FATALITIES,INJURIES)
+eco_dat <- select(data,EVTYPE,PROPDMG,CROPDMG)
 
 # Again we only keep the complete cases:
 eco_dat <- eco_dat[complete.cases(eco_dat),]
@@ -90,7 +90,7 @@ eco_dat$EVTYPE <- tolower(eco_dat$EVTYPE)
 
 # Results
 
-## Storm event population health impact
+## Storm events population health impact
 
 To clarify what is the population health impact of the storm events, we first summarize the fatalities and injuries per event type:
 
@@ -153,4 +153,17 @@ grid.arrange(p,p2,ncol=2)
 ```
 
 As represented on the graphics above it seems that tornados are the absolute most harmfull storm events during the period covered by the source dataset. The fatalities impact is then more distributed on about 10 event types, whereas, for the injuries, we can select only 4 event types responsible for most injury cases (80%).
+
+## Storm events economic impact
+
+We start here with summarizing the property and crop damage per event type:
+
+```{r}
+library(plyr)
+eco_impact <- ddply(eco_dat, "EVTYPE", summarize, prop_damage=sum(PROPDMG), crop_damage=sum(CROPDMG))
+
+eco_nevents <- dim(eco_impact)[1]
+```
+
+We now have to select the most harmfull event types amongt the `r sprintf("%d",eco_nevents)` unique event types found.
 
