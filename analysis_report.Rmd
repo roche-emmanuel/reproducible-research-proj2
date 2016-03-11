@@ -1,12 +1,14 @@
 ---
-title: Analysis of U.S. National Oceanic and Atmospheric Administration's storm
-  data
+title: Analysis of Storm events health and economic impacts
 author: "Emmanuel ROCHE"
-date: "08/03/2016"
+date: "11/03/2016"
 output: html_document
 ---
 
 # Synopsys
+
+This analysis is based on the **U.S. National Oceanic and Atmospheric Administration's storm dataset** covering the period from 1950 to 2011. We first focus on the population health effect of those storm event, and highly the most harmful types of event during the overall period, we then perform the same analysis this time focusing on the economic effect of the storm events by selecting those responsible for most of the damage costs. This report will conclude that in both cases tornados are by far the most harmful type of events that occured in the United States during the covered period of time.
+We extend this report by analysis the evolution of the most significant event types impact other the time and thus conclude that the high impact of tornados is due to some extent to the poor recording quality of the source dataset in the early years.
 
 # Data Processing
 
@@ -114,7 +116,7 @@ highest_inj <- health_impact[order(health_impact$total_injuries, decreasing=T),]
 
 Also note here that those storm event were responsible so far for at least `r format(tot_death,scientific=F)` deaths and `r format(tot_inj,scientific=F)` injuries according to this report.
 
-Now to get an idea on the most harmfull type of storm event we will mainly consider those responsible for 80% of the fatalities and injuries respectively:
+Now to get an idea on the most harmful type of storm event we will mainly consider those responsible for 80% of the fatalities and injuries respectively:
 
 ```{r}
 # Accumulate the percentage of death and injuries:
@@ -137,13 +139,13 @@ library(ggplot2)
 library(gridExtra)
 
 p<-ggplot(focus_death, aes(x=1:nfdeath, y=total_death, fill=EVTYPE)) + geom_bar(stat="identity")+theme_minimal()
-p<-p+labs(title="Most harmfull storm events\nFatalities", x="Event type", y = "Percentage of death")
+p<-p+labs(title="Most harmful storm events\nFatalities", x="Event type", y = "Percentage of death")
 p<-p+geom_text(aes(label=sprintf("%.2f%%",total_death)), vjust=0.0, size=2.5, angle=45, hjust=0.0)
 p<-p+theme(legend.justification=c(1,1), legend.position=c(1,1), axis.text.x=element_blank())
 p<-p+scale_y_continuous(limits = c(0.0,100.0))
 
 p2<-ggplot(focus_inj, aes(x=1:nfinj, y=total_injuries, fill=EVTYPE)) + geom_bar(stat="identity")+theme_minimal()
-p2<-p2+labs(title="Most harmfull storm events\nInjuries", x="Event type", y = "Percentage of injuries")
+p2<-p2+labs(title="Most harmful storm events\nInjuries", x="Event type", y = "Percentage of injuries")
 p2<-p2+geom_text(aes(label=sprintf("%.2f%%",total_injuries)), vjust=-0.3, size=2.5)
 p2<-p2+theme(legend.justification=c(1,1), legend.position=c(1,1), axis.text.x=element_blank())
 p2<-p2+scale_y_continuous(limits = c(0.0,100.0))
@@ -152,7 +154,7 @@ grid.arrange(p,p2,ncol=2)
 
 ```
 
-As represented on the graphics above it seems that tornados are the absolute most harmfull storm events during the period covered by the source dataset. The fatalities impact is then more distributed on about 10 event types, whereas, for the injuries, we can select only 4 event types responsible for most injury cases (80%).
+As represented on the graphics above it seems that tornados are the absolute most harmful storm events during the period covered by the source dataset. The fatalities impact is then more distributed on about 10 event types, whereas, for the injuries, we can select only 4 event types responsible for most injury cases (80%).
 
 ## Storm events economic impact
 
@@ -165,7 +167,7 @@ eco_impact <- ddply(eco_dat, "EVTYPE", summarize, prop_damage=sum(PROPDMG), crop
 eco_nevents <- dim(eco_impact)[1]
 ```
 
-We now have to select the most harmfull event types amongt the `r sprintf("%d",eco_nevents)` unique event types found. To acheive this we can proceed as with the population health analysis: we turn the numbers of interest into percentages, and we select the event types responsible for about 80% of the damage costs.
+We now have to select the most harmful event types amongt the `r sprintf("%d",eco_nevents)` unique event types found. To acheive this we can proceed as with the population health analysis: we turn the numbers of interest into percentages, and we select the event types responsible for about 80% of the damage costs.
 
 But this time, we will summarise the input data one step further, and assume that property damages and crop damages have equivalent economic impact, so we can sum them together first.
 
@@ -203,7 +205,7 @@ eco_nevents <- dim(eco_focus)[1]
 library(ggplot2)
 
 p<-ggplot(eco_focus, aes(x=1:eco_nevents, y=total_damage, fill=EVTYPE)) + geom_bar(stat="identity")+theme_minimal()
-p<-p+labs(title="Most harmfull storm events\nDamage costs", x="Event type", y = "Percentage of all costs")
+p<-p+labs(title="Most harmful storm events\nDamage costs", x="Event type", y = "Percentage of all costs")
 p<-p+geom_text(aes(label=sprintf("%.2f%%",total_damage)), vjust=-0.3, size=2.5, angle=0, hjust=0.5)
 p<-p+theme(legend.justification=c(1,1), legend.position=c(1,1), axis.text.x=element_blank())
 p<-p+scale_y_continuous(limits = c(0.0,100.0))
@@ -211,8 +213,89 @@ p<-p+scale_y_continuous(limits = c(0.0,100.0))
 p
 ```
 
-We observe from the previous graph that `r sprintf("%d", eco_nevents)`event types are responsible for about 80% of the damage costs. Among those listed storm events we can notice once more that the Tornados are the most harmfull event type, accounting on its own for about `r sprintf("%.0f%%",eco_focus$total_damage[1])` of the overall damage cost.
+We observe from the previous graph that `r sprintf("%d", eco_nevents)`event types are responsible for about 80% of the damage costs. Among those listed storm events we can notice once more that the Tornados are the most harmful event type, accounting on its own for about `r sprintf("%.0f%%",eco_focus$total_damage[1])` of the overall damage cost.
 
 
+## Storm events impact evolution
 
+From the previous sections it seems that tornados are, overall, the most harmful type of storm event during the covered period from the input dataset. Yet, what we can check further here is how this impact evolved on a year by year basis. So we will this time summarize all the input data per year and plot the final evolution of health/damage costs percentages.
+
+```{r}
+# we start with extracting the year from the event begin date:
+dates <- as.Date(data$BGN_DATE,format="%m/%d/%Y %H:%M:%S")
+data$years <- as.numeric(format(dates,'%Y'))
+
+# keep only the variables of interest:
+evol_dat <- select(data, EVTYPE,FATALITIES,INJURIES,PROPDMG,CROPDMG,years)
+
+# Now clean the EVTYPE:
+evol_dat$EVTYPE <- gsub("\\.","",evol_dat$EVTYPE)
+evol_dat$EVTYPE <- gsub("/$","",evol_dat$EVTYPE)
+evol_dat$EVTYPE <- gsub("/"," AND ",evol_dat$EVTYPE)
+evol_dat$EVTYPE <- gsub(" & "," AND ",evol_dat$EVTYPE)
+evol_dat$EVTYPE <- tolower(evol_dat$EVTYPE)
+
+# We now summarize the data per year and per event type:
+# note that this time we merge the fatalalities and injuries to simplify this analysis:
+library(plyr)
+evol_impact <- ddply(evol_dat, c("years","EVTYPE"), summarize, health_cost=sum(FATALITIES+INJURIES), eco_cost=sum(PROPDMG+CROPDMG))
+
+#head(evol_impact, 20)
+
+# also summarize the data per year to get the percentage values:
+impact_year <- ddply(evol_dat, c("years"), summarize, total_health_cost=sum(FATALITIES+INJURIES), total_eco_cost=sum(PROPDMG+CROPDMG))
+
+#head(impact_year, 20)
+
+# merge this year sum back into the eco_impact:
+evol_impact <- merge(evol_impact, impact_year, by="years")
+#head(evol_impact,20)
+
+# Now compute the percentage of health and damage costs for each event type and each year:
+evol_impact <- mutate(evol_impact, health_cost = 100.0*health_cost/total_health_cost, eco_cost=100.0*eco_cost/total_eco_cost)
+#head(evol_impact)
+```
+
+Now we may consider that the data collected during the last years is the most accurate, and as such, we might want to consider the most harmful event types from those latest years only, and see how their history evolved. Here we select the 5 top event types this year:
+
+```{r}
+#selecting the most harmful events from the latest year only:
+lasty_dat<- evol_impact[evol_impact$years==2011,]
+
+# Select the most harmful event types:
+heal_lasty_dat <- lasty_dat[order(lasty_dat$health_cost, decreasing=T),]
+eco_lasty_dat <- lasty_dat[order(lasty_dat$eco_cost, decreasing =T),]
+
+heal_lasty_dat <- mutate(heal_lasty_dat,accum_cost = cumsum(health_cost))
+eco_lasty_dat <- mutate(eco_lasty_dat,accum_cost = cumsum(eco_cost))
+
+heal_lasty_dat <- heal_lasty_dat[1:5,c("years","EVTYPE","health_cost")]
+eco_lasty_dat <- eco_lasty_dat[1:5,c("years","EVTYPE","eco_cost")]
+
+heal_lasty_dat
+eco_lasty_dat
+```
+
+Now we can plot the history of the 5 most harmful event type selected in 2011:
+
+```{r}
+
+# select only the event types of interest:
+heal_impact <- evol_impact[evol_impact$EVTYPE %in% heal_lasty_dat$EVTYPE,]
+eco_impact <- evol_impact[evol_impact$EVTYPE %in% eco_lasty_dat$EVTYPE,]
+
+p <- ggplot(data=heal_impact, aes(x=years, y=health_cost, group=EVTYPE, color=EVTYPE)) + geom_line()
+p<-p+labs(title="Evolution of Health costs", x="Year", y = "Percentage of all health costs")
+p<-p+theme(legend.justification=c(0,0), legend.position=c(0,0.1))
+
+p2 <- ggplot(data=eco_impact, aes(x=years, y=eco_cost, group=EVTYPE, color=EVTYPE)) + geom_line()
+p2<-p2+labs(title="Evolution of Economic costs", x="Year", y = "Percentage of all economic costs")
+p2<-p2+theme(legend.justification=c(0,0), legend.position=c(0,0.1))
+
+grid.arrange(p,p2,ncol=2)
+```
+
+What we can conclude from the previous graphs is that the high overall percentage given to the Tornados event type could be  due to the fact that this was the only kind of event type recorded for a long period: other event type records where only introduced in the mid 90's. And even if it seems that tornados still have a major position lately when it comes to health impact, this is not so true anymore if we consider the economic impacts.
+
+Further analysis would be required here to clarify what are the most significant storm event disregarding the early years in the input dataset.
 
