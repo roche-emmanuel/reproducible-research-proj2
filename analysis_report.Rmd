@@ -117,7 +117,7 @@ eco_dat$PROPDMGEXP <- fixMultiplier(eco_dat$PROPDMGEXP)
 eco_dat$CROPDMGEXP <- fixMultiplier(eco_dat$CROPDMGEXP)
 
 # Now perform the damage cost multiplications:
-eco_data <- mutate(eco_dat, PROPDMG=as.numeric(PROPDMG)*PROPDMGEXP,CROPDMG=as.numeric(CROPDMG)*CROPDMGEXP )
+eco_dat <- mutate(eco_dat, PROPDMG=as.numeric(PROPDMG)*PROPDMGEXP,CROPDMG=as.numeric(CROPDMG)*CROPDMGEXP )
 
 # drop the EXP colnums:
 eco_dat <- select(eco_dat,EVTYPE,PROPDMG,CROPDMG)
@@ -246,7 +246,7 @@ p<-p+scale_y_continuous(limits = c(0.0,100.0))
 p
 ```
 
-We observe from the previous graph that `r sprintf("%d", eco_nevents)`event types are responsible for about 80% of the damage costs. Among those listed storm events we can notice once more that the Tornados are the most harmful event type, accounting on its own for about `r sprintf("%.0f%%",eco_focus$total_damage[1])` of the overall damage cost.
+We observe from the previous graph that `r sprintf("%d", eco_nevents)` event types are responsible for about 80% of the damage costs. Among those listed weather events we can notice that the **floods**,**hurricanes** and **typhoon** are the most severe followed once again by the **tornados**.
 
 
 ## Storm events impact evolution
@@ -259,7 +259,16 @@ dates <- as.Date(data$BGN_DATE,format="%m/%d/%Y %H:%M:%S")
 data$years <- as.numeric(format(dates,'%Y'))
 
 # keep only the variables of interest:
-evol_dat <- select(data, EVTYPE,FATALITIES,INJURIES,PROPDMG,CROPDMG,years)
+evol_dat <- select(data, EVTYPE,FATALITIES,INJURIES,PROPDMG,CROPDMG,PROPDMGEXP,CROPDMGEXP,years)
+
+evol_dat$PROPDMGEXP <- fixMultiplier(evol_dat$PROPDMGEXP)
+evol_dat$CROPDMGEXP <- fixMultiplier(evol_dat$CROPDMGEXP)
+
+# Now perform the damage cost multiplications:
+evol_dat <- mutate(evol_dat, PROPDMG=as.numeric(PROPDMG)*PROPDMGEXP,CROPDMG=as.numeric(CROPDMG)*CROPDMGEXP )
+
+# drop the multipliers:
+evol_dat <- select(evol_dat, EVTYPE,FATALITIES,INJURIES,PROPDMG,CROPDMG,years)
 
 # Now clean the EVTYPE:
 evol_dat$EVTYPE <- gsub("\\.","",evol_dat$EVTYPE)
@@ -289,7 +298,7 @@ evol_impact <- mutate(evol_impact, health_cost = 100.0*health_cost/total_health_
 #head(evol_impact)
 ```
 
-Now we may consider that the data collected during the last years is the most accurate, and as such, we might want to consider the most harmful event types from those latest years only, and see how their history evolved. Here we select the 5 top event types this year:
+Now we may postulate that the data collected during the last years is the most accurate, and as such, we might want to consider the most harmful event types from those latest years only, and see how their history evolved. Here we select the 5 top event types from the last year of the input dataset (eg. 2011):
 
 ```{r}
 #selecting the most harmful events from the latest year only:
@@ -330,5 +339,5 @@ grid.arrange(p,p2,ncol=2)
 
 What we can conclude from the previous graphs is that the high overall percentage given to the Tornados event type could be  due to the fact that this was the only kind of event type recorded for a long period: other event type records where only introduced in the mid 90's. And even if it seems that tornados still have a major position lately when it comes to health impact, this is not so true anymore if we consider the economic impacts.
 
-Further analysis would be required here to clarify what are the most significant storm event disregarding the early years in the input dataset.
+Further analysis would be required here to clarify what are the most significant weather events disregarding the early years in the input dataset.
 
