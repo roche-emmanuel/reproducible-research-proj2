@@ -61,6 +61,32 @@ health_dat$EVTYPE <- tolower(health_dat$EVTYPE)
 ```
 
 
+## Economic impact processing
+
+For the economic perspective, we will focus on the following variables:
+
+  * **EVTTYPE** : indicates the type of the storm event that occured,
+  * **PROPDMG**: property damage due to the storm event,
+  * **CROPDMG**: crop damage due to the storm event.
+  
+```{r}
+library(dplyr)
+eco_dat <- select(data,EVTYPE,FATALITIES,INJURIES)
+
+# Again we only keep the complete cases:
+eco_dat <- eco_dat[complete.cases(eco_dat),]
+```
+
+As with the population health processing, we also need to clean the EVTYPE values for this second part of the analysis:
+
+```{r}
+# Applying the transformations rules for the event types:
+eco_dat$EVTYPE <- gsub("\\.","",eco_dat$EVTYPE)
+eco_dat$EVTYPE <- gsub("/$","",eco_dat$EVTYPE)
+eco_dat$EVTYPE <- gsub("/"," AND ",eco_dat$EVTYPE)
+eco_dat$EVTYPE <- gsub(" & "," AND ",eco_dat$EVTYPE)
+eco_dat$EVTYPE <- tolower(eco_dat$EVTYPE)
+```
 
 # Results
 
